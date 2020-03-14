@@ -22,39 +22,59 @@ from world_and_cells import *
 
 world = World()
 
+delta_time = 1
+
 zoom = 1 / 100
 camera_x, camera_y = 0, 0
 
-delta_time = 1
+step = 0
+
+working = True
 
 
 
 def main ():
     global world
-    world = World(food_amount)
-
-    for i in range(cells_amount):
-        world.add_cell(Cell(
-            random.randint(-bounds_spawn_cell, bounds_spawn_cell),
-            random.randint(-bounds_spawn_cell, bounds_spawn_cell),
-            1000,
-        ))
-
-    #world.init_random()
+    world = World()
 
     start_glfw_window()
 
 
 
 def update ():
+    global step
     if delta_time != 0:
         world.update(delta_time)
+        step += 1
 
-    print(f'cells_amount = {len(world.cells)}')
+    cells_amount = len(world.cells)
+    food_amount = len(world.food)
+
+    print('STATE:')
     print('Cell energies = {')
     for cell in world.cells:
         print(cell.energy, end=' ')
-    print('\n}\n\n')
+    print('\n}')
+    print(f'step = {step}')
+    print(f'cells amount = {cells_amount}')
+    print(f'food  amount = {food_amount}')
+
+    print('\nSTATISTICS:')
+    print(world.statistics())
+
+    print('\n\n')
+
+    if cells_amount <= 0:
+        print('No Cells survived')
+        prepare_exit()
+
+    if cells_amount > max_cells_amount:
+        print('Too many Cells')
+        prepare_exit()
+
+    if food_amount > max_food_amount:
+        print('Too many Food')
+        prepare_exit()
 
     render_frame()
 
@@ -85,13 +105,22 @@ def render_frame ():
 
 
 
+def prepare_exit ():
+    global working
+    working = False
+
+
+
+def before_exit ():
+    print('Exiting...')
+
+
+
 def callback_keyboard (window, key, scancode, action, mods):
     global camera_x, camera_y
 
     if action == glfw.PRESS:
-        if key == glfw.KEY_ESCAPE:
-            glfw.set_window_should_close(window, glfw.FALSE)
-        elif key == glfw.KEY_SPACE:
+        if key == glfw.KEY_SPACE:
             global delta_time
             delta_time = 0 if delta_time == 1 else 1
         elif key == glfw.KEY_RIGHT:
@@ -137,7 +166,7 @@ def start_glfw_window ():
     glfw.set_cursor_pos_callback(window, callback_cursor_position)
     glfw.set_scroll_callback(window, callback_scroll)
 
-    while (glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS) and (not glfw.window_should_close(window)):
+    while (working) and (glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS) and (not glfw.window_should_close(window)):
         # Loop until the user closes the window
         # Render here, e.g. using pyOpenGL:
         width, height = glfw.get_framebuffer_size(window)
@@ -155,6 +184,7 @@ def start_glfw_window ():
         glfw.swap_buffers(window) # Swap front and back buffers
         glfw.poll_events() # Poll for and process events
 
+    before_exit()
     glfw.terminate()
 
 

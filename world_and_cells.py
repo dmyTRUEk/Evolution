@@ -13,6 +13,13 @@ from consts import *
 
 
 
+def rand_m1_p1 ():
+    return random.choice((-1, +1))
+
+
+
+
+
 class Cell ():
     def __init__ (self, x, y, energy, seed=None):
         self.x = x
@@ -43,7 +50,7 @@ class Cell ():
 
 
     def set_params (self, mass, speed, angry, sensibility_dist, eat_dist):
-        self.mass = mass
+        self.mass = mass if mass >= 1 else 1
         self.speed = speed
         self.sensibility_dist = sensibility_dist
         self.eat_dist = eat_dist
@@ -67,6 +74,17 @@ class Cell ():
 
 
 
+    def evolve (self, evolve_speed):
+        self.set_params(
+            self.mass + rand_m1_p1()*evolve_speed,
+            self.speed + rand_m1_p1()*evolve_speed,
+            self.angry + rand_m1_p1()*evolve_speed,
+            self.sensibility_dist + rand_m1_p1()*evolve_speed,
+            self.eat_dist + rand_m1_p1()*evolve_speed,
+        )
+
+
+
     def search_for_food (self, food):
         dist_min = float('inf')
         for f in food:
@@ -79,9 +97,9 @@ class Cell ():
             self.energy += closest_food.energy
             closest_food.eated = True
 
-        if dist_min < self.sensibility_dist**2:
-            self.move_x = +1 if self.x > closest_food.x else -1
-            self.move_y = +1 if self.y > closest_food.y else -1
+        elif dist_min < self.sensibility_dist**2:
+            self.move_x = -1 if self.x > closest_food.x else +1
+            self.move_y = -1 if self.y > closest_food.y else +1
 
         else:
             if random.randint(0, 1) == 0: 
@@ -103,17 +121,17 @@ class Cell ():
         self.x += int(dx)
         self.y += int(dy)
 
-        self.energy -= self.mass*(dx**2 + dy**2) + self.sensibility_dist
+        self.energy -= self.mass*(dx**2 + dy**2) + self.sensibility_dist//10 + 3*self.eat_dist
 
 
 
 
 
 class Food ():
-    def __init__ (self, x, y):
+    def __init__ (self, x, y, energy):
         self.x = x
         self.y = y
-        self.energy = energy_per_food()
+        self.energy = energy
         self.eated = False
 
 
@@ -121,39 +139,41 @@ class Food ():
 
 
 class World ():
-    def __init__ (self, food_amount=100):
+    def __init__ (self):
         self.cells = []
         self.food = []
 
-        for i in range(food_amount):
-            self.add_food(Food(
-                random.randint(-bounds_spawn_food, bounds_spawn_food),
-                random.randint(-bounds_spawn_food, bounds_spawn_food),
-            ))
+        self.init_random()
 
 
 
-    #def init_random (self, seed=None):
-    #    for cell in self.cells:
-    #        cell.init_random(seed)
+    def init_random (self, seed=None):
+        for i in range(food_init_amount):
+            self.add_food_at_random_point()
+
+        for i in range(cells_init_amount):
+            self.add_cell_at_random_point()
 
 
 
     def add_cell (self, cell):
         self.cells.append(cell)
-        #print(f'add_cell: {self.cells = }')
-        #print(self.cells)
-
-
 
     def add_cells (self, cells):
         for cell in self.cells:
             self.add_cell(cell)
 
+    def add_cell_at_random_point (self):
+        self.add_cell(Cell(cell_x(), cell_y(), cell_init_energy()))
+
+
 
 
     def add_food (self, food):
         self.food.append(food)
+
+    def add_food_at_random_point (self):
+        self.add_food(Food(food_x(), food_y(), energy_per_food()))
 
 
 
@@ -162,19 +182,49 @@ class World ():
         for cell in self.cells:
             cell.update(delta_time)
 
-            if cell.energy < energy_to_die:
+            if cell.energy < energy_to_die:   # DIE:
+                self.add_food(Food(cell.x, cell.y, energy_per_dead_cell()))
                 self.cells.remove(cell)
 
-            elif cell.energy > energy_to_reproduct:
+            elif cell.energy > energy_to_reproduct:   # REPRODUCT
                 cell.energy //= 2
-                self.add_cell(Cell( cell.x, cell.y, cell.energy//2))
 
-            else:
+                new_cell = Cell(cell.x, cell.y, cell.energy//2)
+                new_cell.evolve(evolution_speed())
+
+                self.add_cell(new_cell)
+
+            else:   # ALIVE:
                 cell.search_for_food(self.food)
 
+        # delete eated food
         for food in self.food:
             if food.eated:
                 self.food.remove(food)
+
+        # add food at random point
+        for i in range(food_spawn_per_step):
+            self.add_food_at_random_point()
+
+
+
+    def statistics (self):
+        ans = ''
+
+        cells_amount = len(self.cells)
+        food_amount = len(self.food)
+
+        sum_speed = 0
+        for cell in self.cells:
+            sum_speed += cell.speed
+
+        avg_speed = sum_speed / cells_amount if cells_amount > 0 else float('nan')
+        ans += f'avarage speed = {avg_speed}'
+
+        return ans
+
+
+
 
 
 
