@@ -11,8 +11,10 @@ from OpenGL.GL import *
 #import OpenGL.GLU as glu
 #import OpenGL.GLUT as glut
 
-#import time
+import time
 
+from utils import *
+import consts
 from consts import *
 from world_and_cells import *
 
@@ -31,11 +33,22 @@ step = 0
 
 working = True
 
+list_cells_amount = []
+list_food_amount = []
+list_cells_speed = []
+
+dict_cells_amount_avg = {}
+dict_food_amount_avg = {}
+dict_cells_speed_avg = {}
+
 
 
 def main ():
     global world
     world = World()
+
+    global time_start
+    time_start = time.time()
 
     start_glfw_window()
 
@@ -43,6 +56,9 @@ def main ():
 
 def update ():
     global step
+    global list_cells_amount, list_food_amount, list_cells_speed
+    global dict_cells_amount_avg, dict_food_amount_avg, dict_cells_speed_avg
+
     if delta_time != 0:
         world.update(delta_time)
         step += 1
@@ -58,25 +74,87 @@ def update ():
     print(f'step = {step}')
     print(f'cells amount = {cells_amount}')
     print(f'food  amount = {food_amount}')
+    print()
+    #print(f'main -> food spawn per step = {food_spawn_per_step}')
+    print(f'food spawn per step = {consts.food_spawn_per_step}')
 
     print('\nSTATISTICS:')
-    print(world.statistics())
+    sum_speed = 0
+    for cell in world.cells:
+        sum_speed += cell.speed
+    cells_speed_avg = sum_speed / cells_amount if cells_amount > 0 else float('nan')
+    print(f'cells_speed_avg = {round(cells_speed_avg, 3)}')
+    print()
+    print(f'{dict_cells_amount_avg = }')
+    print(f'{dict_food_amount_avg = }')
+    print(f'{dict_cells_speed_avg = }')
 
     print('\n\n')
 
     if cells_amount <= 0:
-        print('No Cells survived')
-        prepare_exit()
+        print('No Cells survived\n\n')
+        init_exit()
 
     if cells_amount > max_cells_amount:
-        print('Too many Cells')
-        prepare_exit()
+        print('Too many Cells\n\n')
+        init_exit()
 
     if food_amount > max_food_amount:
-        print('Too many Food')
-        prepare_exit()
+        print('Too many Food\n\n')
+        init_exit()
+
+    list_cells_amount.append(cells_amount)
+    list_food_amount.append(food_amount)
+    list_cells_speed.append(cells_speed_avg)
+    
+    if step % (steps_per_food_decrease := 100) == 0:
+        cells_amount_avg = avg(list_cells_amount)
+        food_amount_avg = avg(list_food_amount)
+        cells_speed_avg = avg(list_cells_speed)
+
+        dict_cells_amount_avg[consts.food_spawn_per_step] = round(cells_amount_avg, 3)
+        dict_food_amount_avg[consts.food_spawn_per_step] = round(food_amount_avg, 3)
+        dict_cells_speed_avg[consts.food_spawn_per_step] = round(cells_speed_avg, 3)
+
+        list_cells_amount = []
+        list_food_amount = []
+        list_cells_speed = []
+
+        consts.food_spawn_per_step = int(consts.food_spawn_per_step / 1.01)
+        #if consts.food_spawn_per_step > 30:
+        #    consts.food_spawn_per_step -= 3
+        #if consts.food_spawn_per_step > 20:
+        #    consts.food_spawn_per_step -= 2
+        #elif consts.food_spawn_per_step > 1:
+        #    consts.food_spawn_per_step -= 1
+        #elif consts.food_spawn_per_step == 1:
+        #    consts.food_spawn_per_step -= 1
+        #elif consts.food_spawn_per_step < 1:
+        #    pass
+        #    #init_exit()
+
+    #if step >= 1000:
+    #    init_exit()
 
     render_frame()
+
+
+
+def before_exit ():
+    time_end = time.time()
+    global time_start
+    print(f'Time elapsed = {time_end-time_start}')
+    print()
+    for key in dict_cells_amount_avg:
+        print(' ', key, dict_cells_amount_avg[key], dict_food_amount_avg[key], dict_cells_speed_avg[key])
+    print('\n\n')
+    print('Exiting...')
+
+
+
+def init_exit ():
+    global working
+    working = False
 
 
 
@@ -102,17 +180,6 @@ def render_frame ():
 
     for food in world.food:
         draw_square(food.x, food.y, (1.0, 1.0, 1.0))
-
-
-
-def prepare_exit ():
-    global working
-    working = False
-
-
-
-def before_exit ():
-    print('Exiting...')
 
 
 
@@ -155,7 +222,7 @@ def start_glfw_window ():
         return
     
     # Create a windowed mode window and its OpenGL context
-    window = glfw.create_window(window_w, window_h, 'Yeah, Science!', None, None) 
+    window = glfw.create_window(window_w, window_h, window_name, None, None) 
     if not window:
         glfw.terminate()
         return

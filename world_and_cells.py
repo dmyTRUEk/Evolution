@@ -6,15 +6,14 @@ This file contains Cells and World classes
 
 import random
 import colorsys
+#import numpy as np
 
+import time
+import sys
+
+from utils import *
+import consts
 from consts import *
-
-
-
-
-
-def rand_m1_p1 ():
-    return random.choice((-1, +1))
 
 
 
@@ -58,6 +57,9 @@ class Cell ():
 
         self.color = colorsys.hls_to_rgb(self.angry/255, 0.5, 1.0)
 
+        self.sensibility_dist2 = self.sensibility_dist**2
+        self.eat_dist2 = self.eat_dist**2
+
 
 
     def init_random (self, seed=None):
@@ -87,17 +89,19 @@ class Cell ():
 
     def search_for_food (self, food):
         dist_min = float('inf')
+
         for f in food:
-            dist = (self.x-f.x)**2 + (self.y-f.y)**2
-            if dist < dist_min:
-                dist_min = dist
-                closest_food = f
+            if abs(dx := self.x-f.x) < self.sensibility_dist and abs(dy := self.y-f.y) < self.sensibility_dist:
+                if (dist := (dx)**2 + (dy)**2) < dist_min:
+                    dist_min = dist
+                    closest_food = f
 
-        if dist_min < self.eat_dist**2:
-            self.energy += closest_food.energy
-            closest_food.eated = True
+        if dist_min <= self.eat_dist2:
+            if not closest_food.eated:
+                self.energy += closest_food.energy
+                closest_food.eated = True
 
-        elif dist_min < self.sensibility_dist**2:
+        elif dist_min <= self.sensibility_dist2:
             self.move_x = -1 if self.x > closest_food.x else +1
             self.move_y = -1 if self.y > closest_food.y else +1
 
@@ -121,7 +125,7 @@ class Cell ():
         self.x += int(dx)
         self.y += int(dy)
 
-        self.energy -= self.mass*(dx**2 + dy**2) + self.sensibility_dist//10 + 3*self.eat_dist
+        self.energy -= self.mass*(dx**2 + dy**2) + self.sensibility_dist//7 + 3*self.eat_dist
 
 
 
@@ -157,6 +161,12 @@ class World ():
 
 
     def add_cell (self, cell):
+        self.add_cell_at_begin(cell)
+
+    def add_cell_at_begin (self, cell):
+        self.cells.insert(0, cell)
+
+    def add_cell_at_end (self, cell):
         self.cells.append(cell)
 
     def add_cells (self, cells):
@@ -164,8 +174,7 @@ class World ():
             self.add_cell(cell)
 
     def add_cell_at_random_point (self):
-        self.add_cell(Cell(cell_x(), cell_y(), cell_init_energy()))
-
+        self.add_cell(Cell(cell_spawn_x(), cell_spawn_y(), cell_init_energy()))
 
 
 
@@ -173,12 +182,13 @@ class World ():
         self.food.append(food)
 
     def add_food_at_random_point (self):
-        self.add_food(Food(food_x(), food_y(), energy_per_food()))
+        self.add_food(Food(food_spawn_x(), food_spawn_y(), energy_per_food()))
 
 
 
     def update (self, delta_time):
         #print(self.cells)
+
         for cell in self.cells:
             cell.update(delta_time)
 
@@ -202,8 +212,8 @@ class World ():
             if food.eated:
                 self.food.remove(food)
 
-        # add food at random point
-        for i in range(food_spawn_per_step):
+        # add some food at random point
+        for i in range(consts.food_spawn_per_step):
             self.add_food_at_random_point()
 
 
@@ -230,6 +240,44 @@ class World ():
 
 
 
+
+'''
+Old code pieces:
+
+
+# BY NUMPY:
+
+#def search_for_food (self, food, np_array_food_xy):
+    ...
+
+# in world.update -> # ALIVE:
+list_food = []
+for f in self.food:
+    list_food.append((f.x, f.y))
+np_array_food_xy = np.array(list_food)
+cell.search_for_food(self.food, np_array_food_xy)
+
+# in search_for_food:
+np_array_dist_xy = np.abs( np_array_food_xy - np.asarray((self.x, self.y)) )
+i_min = None
+for i in range(np_array_food_xy.shape[0]):
+    if (dx := np_array_dist_xy[i][0] < self.sensibility_dist) and (dy := np_array_dist_xy[i][1] < self.sensibility_dist):
+        if (dist := dx**2 + dy**2) < dist_min:
+            dist_min = dist
+            i_min = i
+if i_min != None:
+    closest_food = food[i_min]
+
+
+
+
+
+
+
+
+
+
+'''
 
 
 
