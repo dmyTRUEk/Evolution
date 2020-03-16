@@ -10,6 +10,7 @@ from random import randint
 
 
 
+
 # WINDOW SETTINGS:
 window_w, window_h = 1500, 800
 window_name = 'Yeah, Evolution!'
@@ -64,7 +65,7 @@ cell_spawn_y = lambda: randint(-bounds_spawn_cell, bounds_spawn_cell)
 cell_mass = lambda: randint(1, 5)
 cell_speed = lambda: randint(1, 5) * randint(1, 5)
 cell_angry = lambda: randint(0, 255)
-cell_sensibility_dist = lambda: randint(1, 10) * randint(1, 10)
+cell_sensibility_dist = lambda: randint(3, 10) * randint(3, 10)
 cell_eat_dist = lambda: randint(2, 5) * randint(2, 5)
 
 

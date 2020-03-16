@@ -107,7 +107,7 @@ def update ():
     list_food_amount.append(food_amount)
     list_cells_speed.append(cells_speed_avg)
     
-    if step % (steps_per_food_decrease := 100) == 0:
+    if step % (steps_per_food_decrease := 1000) == 0:
         cells_amount_avg = avg(list_cells_amount)
         food_amount_avg = avg(list_food_amount)
         cells_speed_avg = avg(list_cells_speed)
@@ -120,7 +120,7 @@ def update ():
         list_food_amount = []
         list_cells_speed = []
 
-        consts.food_spawn_per_step = int(consts.food_spawn_per_step / 1.01)
+        consts.food_spawn_per_step = int(consts.food_spawn_per_step / 1.1)
         #if consts.food_spawn_per_step > 30:
         #    consts.food_spawn_per_step -= 3
         #if consts.food_spawn_per_step > 20:
